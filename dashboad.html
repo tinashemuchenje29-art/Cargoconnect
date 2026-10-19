@@ -1,0 +1,260 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CargoConnect - Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f4f7f6; color: #333; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        header { background: #0f172a; color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        header h1 { font-size: 22px; color: #38bdf8; }
+        
+        .user-info { display: flex; align-items: center; gap: 20px; font-size: 15px; color: #cbd5e1; }
+        .btn-logout { background: #d90429; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        .btn-logout:hover { background: #ef233c; }
+        
+        .container { flex: 1; max-width: 1000px; margin: 40px auto; padding: 0 20px; width: 100%; }
+        
+        .card { background: white; padding: 35px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); margin-bottom: 25px; border-top: 5px solid #0284c7; }
+        .card h3 { color: #0f172a; margin-bottom: 15px; font-size: 22px; }
+        .card p { color: #475569; line-height: 1.6; font-size: 15px; margin-bottom: 20px; }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group.full { grid-column: span 2; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; color: #334155; }
+        .form-group input, .form-group select { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
+        
+        .action-btn { background: #0284c7; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; font-size: 15px; }
+        .action-btn:hover { background: #0369a1; }
+
+        .loads-list { margin-top: 20px; }
+        .load-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .load-details h4 { color: #0f172a; font-size: 18px; margin-bottom: 5px; }
+        .load-details p { color: #64748b; font-size: 14px; margin-bottom: 0; }
+        .badge { background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+
+        footer { background: #0f172a; color: #94a3b8; padding: 20px; text-align: center; font-size: 13px; }
+        footer span { color: #38bdf8; }
+        
+        .status-box { padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; display: none; }
+        .status-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="brand-title">CargoConnect Dashboard</h1>
+        <div class="user-info">
+            <span id="welcome-user">Welcome</span>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="container" id="dashboard-container">
+        <!-- Dynamic Content Injected Here -->
+    </div>
+
+    <footer>
+        CargoConnect &bull; Developed by <span>Tinashe Muchenje</span> &amp; <span>Dylan Zvavahera</span>[cite: 1]
+    </footer>
+
+    <script>
+        const currentUser = JSON.parse(localStorage.getItem('cargoconnect_current_user'));
+
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('welcome-user').innerText = `Hello, ${currentUser.name || currentUser.email}`;
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('dashboard-container');
+
+            if (currentUser.role === 'shipper') {
+                container.innerHTML = `
+                    <div class="card">
+                        <h3>Post a New Load</h3>
+                        <p>Enter your cargo pickup, drop-off location, schedule, and your offered budget.</p>
+                        
+                        <div id="shipper-success" class="status-box status-success">Load posted successfully! Truckers can now view it on their load board.</div>
+
+                        <form onsubmit="postLoad(event)">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Pickup Location (City / Border)</label>
+                                    <input type="text" id="pickup" required placeholder="e.g. Harare">
+                                </div>
+                                <div class="form-group">
+                                    <label>Drop-off Location (City / Border)</label>
+                                    <input type="text" id="dropoff" required placeholder="e.g. Lusaka or Bulawayo">
+                                </div>
+                                <div class="form-group">
+                                    <label>Required Date & Time</label>
+                                    <input type="datetime-local" id="load-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Offered Budget ($ USD)</label>
+                                    <input type="number" id="budget" required placeholder="e.g. 1200">
+                                </div>
+                                <div class="form-group full">
+                                    <label>Cargo Description & Weight</label>
+                                    <input type="text" id="cargo-desc" required placeholder="e.g. 20 Tons Palletized Goods / Containers">
+                                </div>
+                            </div>
+                            <button type="submit" class="action-btn">Publish Load</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Your Active Posted Loads</h3>
+                        <div class="loads-list" id="shipper-loads-feed">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                `;
+                loadShipperLoads();
+
+            } else if (currentUser.role === 'trucker') {
+                // Check if trucker already verified
+                const verificationKey = 'cargoconnect_verified_' + currentUser.email;
+                const isVerified = localStorage.getItem(verificationKey);
+
+                container.innerHTML = `
+                    <div class="card">
+                        <h3>Trucker Verification & Credentials</h3>
+                        <p>Submit your official verification details to unlock full load bidding and direct shipper contracts.</p>
+                        
+                        <div id="trucker-success" class="status-box status-success" style="display: ${isVerified ? 'block' : 'none'};">
+                            ${isVerified ? '✓ Your account is verified with submitted credentials.' : ''}
+                        </div>
+
+                        <form onsubmit="submitVerification(event)">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>National ID Number</label>
+                                    <input type="text" id="nat-id" required placeholder="e.g. 63-2983724-F-29" ${isVerified ? 'value="Verified ID on File" disabled' : ''}>
+                                </div>
+                                <div class="form-group">
+                                    <label>Driver's License Number</label>
+                                    <input type="text" id="drivers-license" required placeholder="e.g. Class 2 / EC License Number" ${isVerified ? 'value="Verified License on File" disabled' : ''}>
+                                </div>
+                                <div class="form-group full">
+                                    <label>Vehicle Registration / Fitness Details</label>
+                                    <input type="text" id="vehicle-reg" required placeholder="e.g. Truck Reg: AEX-9021 (Volvo FH16)" ${isVerified ? 'value="Verified Truck Reg: Volvo FH16" disabled' : ''}>
+                                </div>
+                            </div>
+                            ${!isVerified ? '<button type="submit" class="action-btn">Submit Verification Details</button>' : '<p style="color: #166534; font-weight: 600;">Status: Verified Carrier Partner</p>'}
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Available Loads Board</h3>
+                        <p>Browse city-to-city and cross-border loads posted by verified shippers.</p>
+                        <div class="loads-list" id="trucker-loads-feed">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                `;
+                loadTruckerLoads();
+            }
+        }
+
+        // Shipper Load Posting Logic
+        function postLoad(event) {
+            event.preventDefault();
+            const pickup = document.getElementById('pickup').value;
+            const dropoff = document.getElementById('dropoff').value;
+            const date = document.getElementById('load-date').value;
+            const budget = document.getElementById('budget').value;
+            const desc = document.getElementById('cargo-desc').value;
+
+            let allLoads = JSON.parse(localStorage.getItem('cargoconnect_loads')) || [];
+            const newLoad = {
+                id: Date.now(),
+                shipper: currentUser.name || currentUser.email,
+                pickup,
+                dropoff,
+                date,
+                budget,
+                desc
+            };
+
+            allLoads.unshift(newLoad);
+            localStorage.setItem('cargoconnect_loads', JSON.stringify(allLoads));
+
+            document.getElementById('shipper-success').style.display = 'block';
+            event.target.reset();
+            loadShipperLoads();
+        }
+
+        function loadShipperLoads() {
+            const feed = document.getElementById('shipper-loads-feed');
+            let allLoads = JSON.parse(localStorage.getItem('cargoconnect_loads')) || [];
+            // Filter loads posted by current shipper
+            const myLoads = allLoads.filter(l => l.shipper === (currentUser.name || currentUser.email));
+
+            if (myLoads.length === 0) {
+                feed.innerHTML = `<p style="color: #64748b;">You haven't posted any loads yet.</p>`;
+                return;
+            }
+
+            feed.innerHTML = myLoads.map(l => `
+                <div class="load-item">
+                    <div class="load-details">
+                        <h4>${l.pickup} &rarr; ${l.dropoff}</h4>
+                        <p><strong>Cargo:</strong> ${l.desc}</p>
+                        <p><small>Date: ${l.date.replace('T', ' ')}</small></p>
+                    </div>
+                    <div>
+                        <span class="badge">$${l.budget} USD</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Trucker Verification Logic
+        function submitVerification(event) {
+            event.preventDefault();
+            const verificationKey = 'cargoconnect_verified_' + currentUser.email;
+            localStorage.setItem(verificationKey, 'true');
+            
+            document.getElementById('trucker-success').innerText = '✓ Verification submitted successfully! Account status updated.';
+            document.getElementById('trucker-success').style.display = 'block';
+            renderDashboard();
+        }
+
+        function loadTruckerLoads() {
+            const feed = document.getElementById('trucker-loads-feed');
+            let allLoads = JSON.parse(localStorage.getItem('cargoconnect_loads')) || [];
+
+            if (allLoads.length === 0) {
+                feed.innerHTML = `<p style="color: #64748b;">No active loads currently available on the network.</p>`;
+                return;
+            }
+
+            feed.innerHTML = allLoads.map(l => `
+                <div class="load-item">
+                    <div class="load-details">
+                        <h4>${l.pickup} &rarr; ${l.dropoff}</h4>
+                        <p><strong>Cargo:</strong> ${l.desc}</p>
+                        <p><small>Shipper: ${l.shipper} | Date: ${l.date.replace('T', ' ')}</small></p>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="badge" style="display: block; margin-bottom: 8px;">$${l.budget} USD</span>
+                        <button class="action-btn" style="padding: 6px 14px; font-size: 13px;" onclick="alert('Load accepted! Connecting you with shipper: ${l.shipper}')">Accept Load</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function logout() {
+            localStorage.removeItem('cargoconnect_current_user');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
